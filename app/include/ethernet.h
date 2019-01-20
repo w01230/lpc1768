@@ -10,7 +10,7 @@
 
 /* defines used for udp client */
 #define UDP_SERVER_PORT         (1025)
-#define UDP_SERVER_IP           "10.0.0.183"
+#define UDP_SERVER_IP           "10.0.0.201"
 
 /*mulicast defines*/
 #define MULTICAST_ADDR          "239.0.0.1"

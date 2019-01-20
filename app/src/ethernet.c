@@ -202,8 +202,8 @@ static void vUDPClient(void *pvParameters)
 				status = send(socketfd, (char *)net_gs_data.buffer, GS_PACK_LEN, 0);
 				if (status < 0)
 					break;
-				vTaskDelay(1000 / portTICK_PERIOD_MS);
 				//xSemaphoreGive(xSemaphoreGS);
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
 			}
 	}
 

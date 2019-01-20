@@ -37,6 +37,8 @@
 #include <time.h>
 
 /* Select NO_SYS based on OS or Non OS configuration */
+#define LWIP_TCP                        0
+#define LWIP_UDP                        1
 #define LWIP_RAW                        0
 #define LWIP_NETCONN                    0
 #define LWIP_SOCKET                     1
