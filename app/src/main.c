@@ -62,7 +62,7 @@ int main (int argc, char* argv[])
 
 	/* Create task. */
 	xTaskCreate(vTaskInfo, "TaskList", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 1, NULL);
-	xTaskCreate(vUartThread, "Usart0", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 3, NULL);
+	xTaskCreate(vUart0Thread, "Usart0", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 3, NULL);
 	xTaskCreate(vEthernetDaemon, "NetDaemon", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 1, NULL);
 
 	/* Start the scheduler. */

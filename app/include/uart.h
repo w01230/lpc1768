@@ -14,6 +14,7 @@
 #define UART0_RX_ERR      BIT(2)
 #define UART0_TX_DONE     BIT(3)
 #define UART0_TX_ERR      BIT(4)
+#define MOTOR_EVENT       BIT(5)
 
 #define GS_HEADER_I       (0xAA)
 #define GS_HEADER_II      (0x55)
@@ -27,6 +28,6 @@ extern EventGroupHandle_t xEventGroup;
 
 void vUartInit(void);
 void vTaskInfo(void *pvParameters);
-void vUartThread(void *pvParameters);
+void vUart0Thread(void *pvParameters);
 
 #endif /* INCLUDE_UART_H_ */

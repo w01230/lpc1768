@@ -236,7 +236,7 @@ void vTaskInfo(void *pvParameters)
  *
  * receive data and send out via udp
  */
-void vUartThread(void *pvParameters)
+void vUart0Thread(void *pvParameters)
 {
 	unsigned char *buffer = NULL;
 	unsigned char hello[] = "ready to receive.\r\n";

@@ -112,7 +112,7 @@
 #endif
 
 #define DEFAULT_THREAD_PRIO             (tskIDLE_PRIORITY + 2)
-#define DEFAULT_THREAD_STACKSIZE        (configMINIMAL_STACK_SIZE * 1)
+#define DEFAULT_THREAD_STACKSIZE        (configMINIMAL_STACK_SIZE)
 
 /* The number of application tasks communicating with the tcpip_thread + the number of input packets queued for receiving. */
 #define DEFAULT_ACCEPTMBOX_SIZE         4
@@ -122,7 +122,7 @@
 
 /* TCPIP thread must run at higher priority than MAC threads! */
 #define TCPIP_THREAD_PRIO               (configMAX_PRIORITIES - 1)
-#define TCPIP_THREAD_STACKSIZE          (DEFAULT_THREAD_STACKSIZE)
+#define TCPIP_THREAD_STACKSIZE          (DEFAULT_THREAD_STACKSIZE + 32)
 
 #define LWIP_CHECKSUM_ON_COPY           1
 

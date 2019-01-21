@@ -2,7 +2,7 @@
  * ethernet.c
  *
  *  Created on: 2018/12/30
- *      Author: john
+ *	  Author: john
  */
 
 #include "FreeRTOS.h"
@@ -174,6 +174,52 @@ static void vDeviceInfo(void *pvParameters)
  *
  * UDP client function
  */
+static void vUDPServer(void *pvParameters)
+{
+	int socketfd;
+	struct sockaddr_in servaddr, cliaddr;
+	unsigned char buffer[20] = {0};
+	int len, n;
+
+	// Creating socket file descriptor
+	if ( (socketfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+		trace_printf("socket creation failed");
+		return;
+	}
+
+	memset(&servaddr, 0, sizeof(servaddr));
+	memset(&cliaddr, 0, sizeof(cliaddr));
+
+	// Filling server information
+	servaddr.sin_family	= AF_INET;
+	servaddr.sin_addr.s_addr = INADDR_ANY;
+	servaddr.sin_port = htons(UDP_SERVER_PORT);
+
+	// Bind the socket with the server address
+	if (bind(socketfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+		trace_printf("bind failed");
+		return;
+	}
+
+	while(true) {
+		/* send and receive motor control data here */
+		n = recvfrom(socketfd, (char *)buffer, sizeof(buffer), 0, ( struct sockaddr *) &cliaddr, (socklen_t *)&len);
+		if (n < 0)
+			continue;
+		sendto(socketfd, (const char *)buffer, sizeof(buffer), 0, (const struct sockaddr *) &cliaddr, len);
+		/* one operation done send event to rs485 thread */
+		xEventGroupSetBits(xEventGroup, MOTOR_EVENT);
+	}
+
+	closesocket(socketfd);
+}
+
+/*
+ * udp_client
+ *
+ *
+ * UDP client function
+ */
 static void vUDPClient(void *pvParameters)
 {
 	EventBits_t uxBits;
@@ -186,9 +232,9 @@ static void vUDPClient(void *pvParameters)
 		return;
 	}
 
-	server_addr.sin_port = htons(UDP_SERVER_PORT);
+	server_addr.sin_port = htons(UDP_REMOTE_SERVER_PORT);
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr(UDP_SERVER_IP);
+	server_addr.sin_addr.s_addr = inet_addr(UDP_REMOTE_SERVER_IP);
 
 	while (true) {
 		uxBits = xEventGroupWaitBits(xEventGroup, GS_EVENT, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -239,6 +285,9 @@ void vEthernetDaemon(void *pvParameters)
 
 	/* udp client */
 	sys_thread_new("udpclient", vUDPClient, NULL, configMINIMAL_STACK_SIZE , DEFAULT_THREAD_PRIO);
+
+	/* udp server */
+	sys_thread_new("udpserver", vUDPServer, NULL, configMINIMAL_STACK_SIZE , DEFAULT_THREAD_PRIO);
 
 	/* device info */
 	sys_thread_new("deviceinfo", vDeviceInfo, NULL, configMINIMAL_STACK_SIZE * 2, DEFAULT_THREAD_PRIO);
