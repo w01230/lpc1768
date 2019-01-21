@@ -8,6 +8,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "event_groups.h"
 
 #include "lwip/sys.h"
 #include "lwip/tcpip.h"
@@ -55,15 +56,10 @@ static int get_dev_info(struct device_s *device, char *type)
 	strcpy(device->header, type);
 	memcpy(device->dev.vendor, "HDIPC", 6);
 	memcpy(device->dev.name, "LPC1768", 8);
-	memcpy(device->dev.serial_number, "10001000", 9);
+	memcpy(device->dev.serial_number, "1000001", 9);
 	memcpy(device->dev.software, "1.0.0", 4);
 	memcpy(device->dev.hardware, "1.0.0", 4);
-	memcpy(device->net.ip_addr, "10.0.0.155", 11);
-	memcpy(device->net.netmask, "255.0.0.0", 10);
-	memcpy(device->net.gateway, "10.0.0.1", 9);
-	memcpy(device->net.dns1, "10.0.0.1", 9);
-	memcpy(device->net.dns2, "8.8.8.8", 9);
-	memcpy(device->net.mac_addr, "00:00:00:00:00:00", 0x12);
+	memcpy(&device->net, &local_net, sizeof(local_net));
 	memcpy(device->net.port, "80", 3);
 
 	return 0;
@@ -125,7 +121,7 @@ static void vDeviceInfo(void *pvParameters)
 			break;
 		}
 
-		bzero(&mreq, sizeof(struct ip_mreq));
+		memset(&mreq, 0, sizeof(struct ip_mreq));
 		mreq.imr_multiaddr.s_addr = inet_addr(MULTICAST_ADDR);
 		mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 
@@ -145,7 +141,7 @@ static void vDeviceInfo(void *pvParameters)
 
 		memset(&device, 0, sizeof(struct device_s));
 
-		while (1) {
+		while (true) {
 			if ((recvfrom(socketfd, (void *)&device, sizeof(struct device_s), 0, (struct sockaddr *)&local, (socklen_t *)&socklen)) < 0) {
 				trace_printf("recvfrom error");
 			} else {
@@ -168,7 +164,7 @@ static void vDeviceInfo(void *pvParameters)
 				}
 			}
 		}
-	} while(1);
+	} while(false);
 	close(socketfd);
 }
 
@@ -180,6 +176,7 @@ static void vDeviceInfo(void *pvParameters)
  */
 static void vUDPClient(void *pvParameters)
 {
+	EventBits_t uxBits;
 	struct sockaddr_in server_addr;
 	int socketfd, status = 0;
 
@@ -193,18 +190,16 @@ static void vUDPClient(void *pvParameters)
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = inet_addr(UDP_SERVER_IP);
 
-	while (1) {
-			status = connect(socketfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
-			if (status != 0)
-				continue;
-			while (1) {
-				//xSemaphoreTake( xSemaphoreGS, portMAX_DELAY);
-				status = send(socketfd, (char *)net_gs_data.buffer, GS_PACK_LEN, 0);
-				if (status < 0)
-					break;
-				//xSemaphoreGive(xSemaphoreGS);
-				vTaskDelay(1000 / portTICK_PERIOD_MS);
-			}
+	while (true) {
+		uxBits = xEventGroupWaitBits(xEventGroup, GS_EVENT, pdTRUE, pdFALSE, portMAX_DELAY);
+		if ((uxBits & GS_EVENT) != GS_EVENT)
+			continue;
+		status = connect(socketfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+		if (status != 0)
+			continue;
+		status = send(socketfd, (char *)net_gs_data.buffer, GS_PACK_LEN, 0);
+		if (status < 0)
+			continue;
 	}
 
 	closesocket(socketfd);
@@ -227,9 +222,9 @@ void vEthernetDaemon(void *pvParameters)
 	ip4_addr_set_zero(&netmask);
 	ip4_addr_set_zero(&gw);
 #else
-	IP4_ADDR(&ipaddr, 10,0,0,155);
-	IP4_ADDR(&netmask, 255,0,0,0);
-	IP4_ADDR(&gw, 10,0,0,1);
+	inet_pton(AF_INET, local_net.ip_addr, &ipaddr);
+	inet_pton(AF_INET, local_net.netmask, &netmask);
+	inet_pton(AF_INET, local_net.gateway, &gw);
 #endif
 
 	tcpip_init(NULL, NULL);				/* Initialize TCP/IP Stack. */
@@ -243,13 +238,13 @@ void vEthernetDaemon(void *pvParameters)
 #endif
 
 	/* udp client */
-	sys_thread_new("udpclient", vUDPClient, NULL, configMINIMAL_STACK_SIZE * 2, DEFAULT_THREAD_PRIO);
+	sys_thread_new("udpclient", vUDPClient, NULL, configMINIMAL_STACK_SIZE , DEFAULT_THREAD_PRIO);
 
 	/* device info */
 	sys_thread_new("deviceinfo", vDeviceInfo, NULL, configMINIMAL_STACK_SIZE * 2, DEFAULT_THREAD_PRIO);
 
 	/* This loop monitors the PHY link and will handle cable events via the PHY driver. */
-	while (1) {
+	while (true) {
 		physts = lpcPHYStsPoll();
 
 		/* Only check for connection state when the PHY status has changed */

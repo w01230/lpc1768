@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "diag/Trace.h"
 
@@ -17,6 +18,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "event_groups.h"
 
 #include "ethernet.h"
 
@@ -24,8 +26,6 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-
-struct uart_data_s uart0_data = {.channel0_rx_tc = 0, .channel1_tx_tc = 0, .state = 0};
 
 /*
  * vUartInit
@@ -79,44 +79,45 @@ void vUartInit(void)
  */
 void DMA_IRQHandler (void)
 {
-	uint32_t tmp;
-		// Scan interrupt pending
-	for (tmp = 0; tmp <= 7; tmp++) {
-		if (GPDMA_IntGetStatus(GPDMA_STAT_INT, tmp)){
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	uint32_t channel;
+	// Scan interrupt pending
+	for (channel = 0; channel <= 7; channel++) {
+		if (GPDMA_IntGetStatus(GPDMA_STAT_INT, channel)){
 			// Check counter terminal status
-			if(GPDMA_IntGetStatus(GPDMA_STAT_INTTC, tmp)){
+			if(GPDMA_IntGetStatus(GPDMA_STAT_INTTC, channel)){
 				// Clear terminate counter Interrupt pending
-				GPDMA_ClearIntPending (GPDMA_STATCLR_INTTC, tmp);
+				GPDMA_ClearIntPending (GPDMA_STATCLR_INTTC, channel);
 
-				switch (tmp){
-					case 0:
-						uart0_data.channel0_rx_tc++;
-						GPDMA_ChannelCmd(0, DISABLE);
-						break;
-					case 1:
-						uart0_data.channel1_tx_tc++;
-						GPDMA_ChannelCmd(1, DISABLE);
-						break;
-					default:
-						break;
+				switch (channel){
+				case 0:
+					xEventGroupSetBitsFromISR(xEventGroup, UART0_RX_DONE, &xHigherPriorityTaskWoken);
+					GPDMA_ChannelCmd(0, DISABLE);
+					break;
+				case 1:
+					xEventGroupSetBitsFromISR(xEventGroup, UART0_TX_DONE, &xHigherPriorityTaskWoken);
+					GPDMA_ChannelCmd(1, DISABLE);
+					break;
+				default:
+					break;
 				}
 
 			}
-				// Check error terminal status
-			if (GPDMA_IntGetStatus(GPDMA_STAT_INTERR, tmp)){
+			// Check error terminal status
+			if (GPDMA_IntGetStatus(GPDMA_STAT_INTERR, channel)){
 				// Clear error counter Interrupt pending
-				GPDMA_ClearIntPending (GPDMA_STATCLR_INTERR, tmp);
-				switch (tmp){
-					case 0:
-						uart0_data.channel0_rx_err++;
-						GPDMA_ChannelCmd(0, DISABLE);
-						break;
-					case 1:
-						uart0_data.channel1_tx_err++;
-						GPDMA_ChannelCmd(1, DISABLE);
-						break;
-					default:
-						break;
+				GPDMA_ClearIntPending (GPDMA_STATCLR_INTERR, channel);
+				switch (channel){
+				case 0:
+					xEventGroupSetBitsFromISR(xEventGroup, UART0_RX_ERR, &xHigherPriorityTaskWoken);
+					GPDMA_ChannelCmd(0, DISABLE);
+					break;
+				case 1:
+					xEventGroupSetBitsFromISR(xEventGroup, UART0_TX_ERR, &xHigherPriorityTaskWoken);
+					GPDMA_ChannelCmd(1, DISABLE);
+					break;
+				default:
+					break;
 				}
 			}
 		}
@@ -131,7 +132,7 @@ void DMA_IRQHandler (void)
  */
 static int uart0_recv_dma(unsigned char *buffer, unsigned int size)
 {
-	unsigned int timeout = UART_BLOCKING_TIMEOUT;
+	EventBits_t uxBits;
 
 	GPDMA_Channel_CFG_Type GPDMACfg;
 
@@ -154,20 +155,12 @@ static int uart0_recv_dma(unsigned char *buffer, unsigned int size)
 	GPDMACfg.DMALLI = 0;
 	GPDMA_Setup(&GPDMACfg);
 
-	/* Reset terminal counter */
-	uart0_data.channel0_rx_tc = 0;
-	/* Reset Error counter */
-	uart0_data.channel0_rx_err = 0;
-
 	// Enable GPDMA channel 0
 	GPDMA_ChannelCmd(0, ENABLE);
 
-	while ((uart0_data.channel0_rx_tc == 0) && (uart0_data.channel0_rx_err == 0)){
-		if (timeout == 0)
-			return -1;
-		timeout--;
-
-	};
+	uxBits = xEventGroupWaitBits(xEventGroup, UART0_RX_DONE | UART0_RX_ERR, pdTRUE, pdFALSE, portMAX_DELAY);
+	if ((uxBits & UART0_RX_DONE) != UART0_RX_DONE)
+		return -1;
 
 	return 0;
 }
@@ -180,7 +173,7 @@ static int uart0_recv_dma(unsigned char *buffer, unsigned int size)
  */
 static int uart0_send_dma(unsigned char *buffer, unsigned int size)
 {
-	unsigned int timeout = UART_BLOCKING_TIMEOUT;
+	EventBits_t uxBits;
 
 	GPDMA_Channel_CFG_Type GPDMACfg;
 
@@ -204,43 +197,34 @@ static int uart0_send_dma(unsigned char *buffer, unsigned int size)
 	// Setup channel with given parameter
 	GPDMA_Setup(&GPDMACfg);
 
-	/* Reset terminal counter */
-	uart0_data.channel0_rx_tc = 0;
-	/* Reset Error counter */
-	uart0_data.channel0_rx_err = 0;
-
 	// Enable GPDMA channel 1
 	GPDMA_ChannelCmd(1, ENABLE);
 
-	/* wait for time out */
-	while ((uart0_data.channel1_tx_tc == 0) && (uart0_data.channel1_tx_err == 0)) {
-		if (timeout == 0)
-			return -1;
-		timeout--;
-
-	};
+	uxBits = xEventGroupWaitBits(xEventGroup, UART0_TX_DONE | UART0_TX_ERR, pdTRUE, pdFALSE, portMAX_DELAY);
+	if ((uxBits & UART0_TX_DONE) != UART0_TX_DONE)
+		return -1;
 
 	return 0;
 }
 
 /*
- * vUartThread
+ * vTaskInfo
  *
  *
- * receive data and send out via udp
+ * printf task info
  */
 void vTaskInfo(void *pvParameters)
 {
 	char *info = NULL;
 
-	info = (char *)malloc(512);
+	info = (char *)pvPortMalloc(1024);
 	if (info == NULL)
-		trace_printf("falied to malloc memory\n");
+		trace_printf("failed to malloc memory\n");
 
 	while (1) {
 		vTaskList(info);
-		trace_printf("---------------task list-------------------\n");
-		trace_printf("%s\n", info);
+		trace_printf("task          state  priority  stack  number\n");
+		trace_printf("%s", info);
 		trace_printf("free heap:%u\n", xPortGetFreeHeapSize());
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 	}
@@ -254,24 +238,32 @@ void vTaskInfo(void *pvParameters)
  */
 void vUartThread(void *pvParameters)
 {
+	unsigned char *buffer = NULL;
 	unsigned char hello[] = "ready to receive.\r\n";
 
 	uart0_send_dma(hello, sizeof(hello));
 
-	while(1) {
-		uart0_recv_dma(uart0_data.buffer, GS_HEADER_LEN);
-		if (uart0_data.buffer[0] != GS_HEADER_I)
-			continue;
-		uart0_recv_dma(uart0_data.buffer + GS_HEADER_LEN, GS_HEADER_LEN);
-		if (uart0_data.buffer[1] != GS_HEADER_II)
-			continue;
-		uart0_recv_dma(uart0_data.buffer + GS_HEADER_LEN * 2, GS_DATA_LEN);
+	buffer = pvPortMalloc(GS_PACK_LEN + 16);
+	if (buffer == NULL)
+		return;
 
-		//xSemaphoreTake( xSemaphoreGS, portMAX_DELAY);
-		memcpy(net_gs_data.buffer, uart0_data.buffer, GS_PACK_LEN);
-		uart0_send_dma(uart0_data.buffer, GS_PACK_LEN);
-		//xSemaphoreGive(xSemaphoreGS);
+	while(true) {
+		uart0_recv_dma(buffer, GS_HEADER_LEN);
+		if (buffer[0] != GS_HEADER_I)
+			continue;
+		uart0_recv_dma(buffer + GS_HEADER_LEN, GS_HEADER_LEN);
+		if (buffer[1] != GS_HEADER_II)
+			continue;
+		uart0_recv_dma(buffer + GS_HEADER_LEN * 2, GS_DATA_LEN);
+
+		memcpy(net_gs_data.buffer, buffer, GS_PACK_LEN);
+		xEventGroupSetBits(xEventGroup, GS_EVENT);
+
+		uart0_send_dma(buffer, GS_PACK_LEN);
 	}
+
+	/* will never be here */
+	vPortFree(buffer);
 }
 
 

@@ -43,8 +43,8 @@
 #define LWIP_NETCONN                    0
 #define LWIP_SOCKET                     1
 
-#define LWIP_IPV6						0
-#define LWIP_SO_RCVTIMEO                0		/* Use receive timeout to netconn. */
+#define LWIP_IPV6                       0
+#define LWIP_SO_RCVTIMEO                0        /* Use receive timeout to netconn. */
 
 #define LWIP_TIMEVAL_PRIVATE            0
 #define LWIP_COMPAT_SOCKETS             2
@@ -52,10 +52,10 @@
 #define LWIP_SOCKET_POLL                1
 
 /* Freertos/lwip/PHY config. */
-#define LOCK_RX_THREAD					1		/* To protect RX Processing. */
-#define LPC_TX_PBUF_BOUNCE_EN			1
+#define LOCK_RX_THREAD                  1        /* To protect RX Processing. */
+#define LPC_TX_PBUF_BOUNCE_EN           1
 
-#define MAC_NO_FILTER					0
+#define MAC_NO_FILTER                   0
 #if !MAC_NO_FILTER
 #define IP_SOF_BROADCAST                1
 #define IP_SOF_BROADCAST_RECV           1
@@ -112,7 +112,7 @@
 #endif
 
 #define DEFAULT_THREAD_PRIO             (tskIDLE_PRIORITY + 2)
-#define DEFAULT_THREAD_STACKSIZE        (configMINIMAL_STACK_SIZE * 2)
+#define DEFAULT_THREAD_STACKSIZE        (configMINIMAL_STACK_SIZE * 1)
 
 /* The number of application tasks communicating with the tcpip_thread + the number of input packets queued for receiving. */
 #define DEFAULT_ACCEPTMBOX_SIZE         4
@@ -121,7 +121,7 @@
 #define TCPIP_MBOX_SIZE                 (DEFAULT_ACCEPTMBOX_SIZE + DEFAULT_TCP_RECVMBOX_SIZE + DEFAULT_UDP_RECVMBOX_SIZE)
 
 /* TCPIP thread must run at higher priority than MAC threads! */
-#define TCPIP_THREAD_PRIO               (DEFAULT_THREAD_PRIO + 3)
+#define TCPIP_THREAD_PRIO               (configMAX_PRIORITIES - 1)
 #define TCPIP_THREAD_STACKSIZE          (DEFAULT_THREAD_STACKSIZE)
 
 #define LWIP_CHECKSUM_ON_COPY           1

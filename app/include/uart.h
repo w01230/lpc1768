@@ -1,22 +1,19 @@
 /*
  * uart.h
  *
- *  Created on: 2019��1��19��
+ *  Created on: 2019/01/19
  *      Author: john
  */
 
 #ifndef INCLUDE_UART_H_
 #define INCLUDE_UART_H
 
-struct uart_data_s {
-	unsigned int channel0_rx_tc;
-	unsigned int channel1_tx_tc;
-	unsigned int channel0_rx_err;
-	unsigned int channel1_tx_err;
-	unsigned char buffer[128];
-	unsigned char state:1;
-};
-
+#define BIT(n)            (1 << n)
+#define GS_EVENT          BIT(0)
+#define UART0_RX_DONE     BIT(1)
+#define UART0_RX_ERR      BIT(2)
+#define UART0_TX_DONE     BIT(3)
+#define UART0_TX_ERR      BIT(4)
 
 #define GS_HEADER_I       (0xAA)
 #define GS_HEADER_II      (0x55)
@@ -25,11 +22,8 @@ struct uart_data_s {
 #define GS_DATA_LEN       (98)
 #define GS_PACK_LEN       (GS_HEADER_LEN * 2 + GS_DATA_LEN)
 
-/* gs data struct */
-struct uart_data_s uart0_data;
-
-/* mutex for GS buffer */
-extern SemaphoreHandle_t xSemaphoreGS;
+/* event group */
+extern EventGroupHandle_t xEventGroup;
 
 void vUartInit(void);
 void vTaskInfo(void *pvParameters);

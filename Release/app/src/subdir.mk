@@ -6,17 +6,17 @@
 C_SRCS += \
 ../app/src/ethernet.c \
 ../app/src/main.c \
-../app/src/tasklist.c 
+../app/src/uart.c 
 
 OBJS += \
 ./app/src/ethernet.o \
 ./app/src/main.o \
-./app/src/tasklist.o 
+./app/src/uart.o 
 
 C_DEPS += \
 ./app/src/ethernet.d \
 ./app/src/main.d \
-./app/src/tasklist.d 
+./app/src/uart.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

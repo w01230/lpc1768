@@ -35,6 +35,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "event_groups.h"
 
 #include "ethernet.h"
 #include "uart.h"
@@ -42,8 +43,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-/* mutex for gs buffer */
-SemaphoreHandle_t xSemaphoreGS = NULL;
+/* event group */
+EventGroupHandle_t xEventGroup = NULL;
 
 static void prvSetupHardware(void)
 {
@@ -56,13 +57,13 @@ int main (int argc, char* argv[])
 	/* Configure the hardware. */
 	prvSetupHardware();
 
-	/* create mutex for GS buffer */
-	xSemaphoreGS = xSemaphoreCreateMutex();
+	/* create event group */
+	xEventGroup = xEventGroupCreate();
 
 	/* Create task. */
-	//xTaskCreate(vTaskInfo, "TaskList", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
-	xTaskCreate(vUartThread, "Usart0", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
-	xTaskCreate(vEthernetDaemon, "NetDaemon", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
+	xTaskCreate(vTaskInfo, "TaskList", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 1, NULL);
+	xTaskCreate(vUartThread, "Usart0", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 3, NULL);
+	xTaskCreate(vEthernetDaemon, "NetDaemon", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 1, NULL);
 
 	/* Start the scheduler. */
 	vTaskStartScheduler();

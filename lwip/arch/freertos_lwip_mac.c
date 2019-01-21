@@ -91,6 +91,7 @@ static lpc_enetdata_t lpc_enetdata;
 /* MII Mgmt Configuration register - Clock divider setting */
 const u8_t ethclkdiv[] = {4, 6, 8, 10, 14, 20, 28, 36, 40, 44, 48, 52, 56, 60, 64};
 
+struct local_net_s local_net = {.ip_addr = IPv4_ADDR, .netmask = NETMASK, .gateway = GATEWAY, .dns1 = DNS1, .dns2 = DNS2, .mac_addr = MAC_ADDR};
 /*****************************************************************************
  * Private functions
  ****************************************************************************/
@@ -935,7 +936,7 @@ void lpc_emac_set_speed(u8_t mbs_100)
 /* LWIP 17xx/40xx EMAC initialization function */
 err_t lpc_enetif_init(struct netif *netif)
 {
-	const u8_t boardmac[] = {MAC05, MAC04, MAC03, MAC02, MAC01, MAC00};
+	unsigned int boardmac[6] = {0x00};
 	err_t err;
 
 	LWIP_ASSERT("netif != NULL", (netif != NULL));
@@ -943,6 +944,7 @@ err_t lpc_enetif_init(struct netif *netif)
 	lpc_enetdata.pnetif = netif;
 
 	/* set MAC hardware address */
+	sscanf(MAC_ADDR, "%02X:%02X:%02X:%02X:%02X:%02X", &boardmac[0], &boardmac[1], &boardmac[2], &boardmac[3], &boardmac[4], &boardmac[5]);
 	netif->hwaddr_len = ETHARP_HWADDR_LEN;
 	memcpy(netif->hwaddr, boardmac, netif->hwaddr_len);
 
@@ -950,7 +952,7 @@ err_t lpc_enetif_init(struct netif *netif)
 	netif->mtu = IFMTUSIZE;
 
 #if LWIP_NETIF_HOSTNAME
-	netif->hostname = "lwip";	/* Initialize interface hostname */
+	netif->hostname = HOSTNAME;	/* Initialize interface hostname */
 #endif
 
 	netif->name[0] = IFNAME0;

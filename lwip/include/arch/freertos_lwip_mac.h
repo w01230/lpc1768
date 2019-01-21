@@ -66,14 +66,13 @@ extern "C"
 #define tskTXCLEAN_PRIORITY       (TCPIP_THREAD_PRIO + 1)
 #define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY    5
 
-
-/* TODO: Read this data below from FLASH! */
-#define MAC05 					0x00
-#define MAC04 					0x1A
-#define MAC03 					0x3F
-#define MAC02 					0x08
-#define MAC01 					0x80
-#define MAC00 					0xAA
+#define HOSTNAME               "LPC1768"
+#define IPv4_ADDR              "10.0.0.155"
+#define NETMASK                "255.0.0.0"
+#define GATEWAY                "10.0.0.1"
+#define DNS1                   "8.8.8.8"
+#define DNS2                   "223.5.5.5"
+#define MAC_ADDR               "00:1A:3F:08:80:00"
 
 /* Define those to better describe your network interface. */
 #define IFNAME0 				'e'
@@ -92,6 +91,19 @@ extern "C"
 /* PHY interface 100MBS or 10MBS enable flag.
    Only applies if PHY_USE_AUTONEG = 0 */
 #define PHY_USE_100MBS 			1
+
+/* struct of net */
+struct local_net_s {
+	char ip_addr[16];
+	char gateway[16];
+	char netmask[16];
+	char dns1[16];
+	char dns2[16];
+	char mac_addr[18];
+};
+
+/* store local net info */
+struct local_net_s local_net;
 
 /**
  * @brief	Attempt to read a packet from the EMAC interface
