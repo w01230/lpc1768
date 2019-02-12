@@ -64,7 +64,6 @@ extern "C"
  * the same. */
 #define tskRECPKT_PRIORITY        (TCPIP_THREAD_PRIO + 1)
 #define tskTXCLEAN_PRIORITY       (TCPIP_THREAD_PRIO + 1)
-#define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY    5
 
 #define HOSTNAME               "LPC1768"
 #define IPv4_ADDR              "10.0.0.155"

@@ -207,8 +207,7 @@ static void vUDPServer(void *pvParameters)
 		if (n < 0)
 			continue;
 		sendto(socketfd, (const char *)buffer, sizeof(buffer), 0, (const struct sockaddr *) &cliaddr, len);
-		/* one operation done send event to rs485 thread */
-		xEventGroupSetBits(xEventGroup, MOTOR_EVENT);
+
 	}
 
 	closesocket(socketfd);
@@ -222,7 +221,6 @@ static void vUDPServer(void *pvParameters)
  */
 static void vUDPClient(void *pvParameters)
 {
-	EventBits_t uxBits;
 	struct sockaddr_in server_addr;
 	int socketfd, status = 0;
 
@@ -237,9 +235,6 @@ static void vUDPClient(void *pvParameters)
 	server_addr.sin_addr.s_addr = inet_addr(UDP_REMOTE_SERVER_IP);
 
 	while (true) {
-		uxBits = xEventGroupWaitBits(xEventGroup, GS_EVENT, pdTRUE, pdFALSE, portMAX_DELAY);
-		if ((uxBits & GS_EVENT) != GS_EVENT)
-			continue;
 		status = connect(socketfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
 		if (status != 0)
 			continue;
@@ -284,10 +279,10 @@ void vEthernetDaemon(void *pvParameters)
 #endif
 
 	/* udp client */
-	sys_thread_new("udpclient", vUDPClient, NULL, configMINIMAL_STACK_SIZE , DEFAULT_THREAD_PRIO);
+	sys_thread_new("udpclient", vUDPClient, NULL, configMINIMAL_STACK_SIZE * 2, DEFAULT_THREAD_PRIO);
 
 	/* udp server */
-	sys_thread_new("udpserver", vUDPServer, NULL, configMINIMAL_STACK_SIZE , DEFAULT_THREAD_PRIO);
+	sys_thread_new("udpserver", vUDPServer, NULL, configMINIMAL_STACK_SIZE * 2, DEFAULT_THREAD_PRIO);
 
 	/* device info */
 	sys_thread_new("deviceinfo", vDeviceInfo, NULL, configMINIMAL_STACK_SIZE * 2, DEFAULT_THREAD_PRIO);

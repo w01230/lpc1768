@@ -43,12 +43,15 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-/* event group */
-EventGroupHandle_t xEventGroup = NULL;
-
 static void prvSetupHardware(void)
 {
+	/* 32 group priorities */
+	NVIC_SetPriorityGrouping(2);
+
+	/* get system cock */
 	SystemCoreClockUpdate();
+
+	/* init uart */
 	vUartInit();
 }
 
@@ -57,13 +60,9 @@ int main (int argc, char* argv[])
 	/* Configure the hardware. */
 	prvSetupHardware();
 
-	/* create event group */
-	xEventGroup = xEventGroupCreate();
-
 	/* Create task. */
-	xTaskCreate(vTaskInfo, "TaskList", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 1, NULL);
-	xTaskCreate(vUart0Thread, "Usart0", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 3, NULL);
-	xTaskCreate(vEthernetDaemon, "NetDaemon", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 1, NULL);
+	xTaskCreate(vTaskInfo, "TaskList", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
+	xTaskCreate(vEthernetDaemon, "NetDaemon", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
 
 	/* Start the scheduler. */
 	vTaskStartScheduler();

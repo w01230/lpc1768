@@ -35,6 +35,8 @@
  */
 void vUartInit(void)
 {
+	static uint8_t hello[] = "ready to receive data\n";
+
 	UART_CFG_Type UARTConfig;
 	UART_FIFO_CFG_Type UARTFIFOConfig;
 	PINSEL_CFG_Type PinConfig;
@@ -55,7 +57,7 @@ void vUartInit(void)
 	UARTConfig.Stopbits = UART_STOPBIT_1;
 	UART_Init(LPC_UART0, &UARTConfig);
 
-	UARTFIFOConfig.FIFO_DMAMode = ENABLE;
+	UARTFIFOConfig.FIFO_DMAMode = DISABLE;
 	UARTFIFOConfig.FIFO_Level = UART_FIFO_TRGLEV0;
 	UARTFIFOConfig.FIFO_ResetRxBuf = ENABLE;
 	UARTFIFOConfig.FIFO_ResetTxBuf = ENABLE;
@@ -63,148 +65,85 @@ void vUartInit(void)
 
 	UART_TxCmd(LPC_UART0, ENABLE);
 
-	GPDMA_Init();
+	/* Enable UART Rx interrupt */
+	UART_IntConfig(LPC_UART0, UART_INTCFG_RBR, ENABLE);
+	/* Enable UART line status interrupt */
+	UART_IntConfig(LPC_UART0, UART_INTCFG_RLS, ENABLE);
 
-	NVIC_DisableIRQ(DMA_IRQn);
-	NVIC_SetPriority(DMA_IRQn, ((0x01<<3)|0x01));
+	NVIC_SetPriority(UART0_IRQn, 5);
 
-	NVIC_EnableIRQ(DMA_IRQn);
+	NVIC_EnableIRQ(UART0_IRQn);
+
+	/* Send hello */
+	UART_Send(LPC_UART0, (uint8_t *)hello, sizeof(hello), BLOCKING);
 }
 
 /*
- * DMA_IRQHandler
+ * uart_receive_int
  *
  *
- * DMA interrupt handler
+ * uart receive data via interrupt
  */
-void DMA_IRQHandler (void)
+void uart_receive_int(void)
 {
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	uint32_t channel;
-	// Scan interrupt pending
-	for (channel = 0; channel <= 7; channel++) {
-		if (GPDMA_IntGetStatus(GPDMA_STAT_INT, channel)){
-			// Check counter terminal status
-			if(GPDMA_IntGetStatus(GPDMA_STAT_INTTC, channel)){
-				// Clear terminate counter Interrupt pending
-				GPDMA_ClearIntPending (GPDMA_STATCLR_INTTC, channel);
+	uint32_t len = 0;
+	uint8_t data = 0;
+	static uint8_t prev = 0;
+	static bool frame_flag = false;
+	static uint8_t gs_data = 0;
 
-				switch (channel){
-				case 0:
-					xEventGroupSetBitsFromISR(xEventGroup, UART0_RX_DONE, &xHigherPriorityTaskWoken);
-					GPDMA_ChannelCmd(0, DISABLE);
-					break;
-				case 1:
-					xEventGroupSetBitsFromISR(xEventGroup, UART0_TX_DONE, &xHigherPriorityTaskWoken);
-					GPDMA_ChannelCmd(1, DISABLE);
-					break;
-				default:
-					break;
-				}
-
+	len = UART_Receive(LPC_UART0, &data, 1, NONE_BLOCKING);
+	if (len > 0) {
+		if (data == GS_HEADER_II) {
+			if (prev == GS_HEADER_I) {
+				net_gs_data.buffer[0] = prev;
+				net_gs_data.buffer[1] = data;
+				frame_flag = true;
+				gs_data = 0;
+				return;
 			}
-			// Check error terminal status
-			if (GPDMA_IntGetStatus(GPDMA_STAT_INTERR, channel)){
-				// Clear error counter Interrupt pending
-				GPDMA_ClearIntPending (GPDMA_STATCLR_INTERR, channel);
-				switch (channel){
-				case 0:
-					xEventGroupSetBitsFromISR(xEventGroup, UART0_RX_ERR, &xHigherPriorityTaskWoken);
-					GPDMA_ChannelCmd(0, DISABLE);
-					break;
-				case 1:
-					xEventGroupSetBitsFromISR(xEventGroup, UART0_TX_ERR, &xHigherPriorityTaskWoken);
-					GPDMA_ChannelCmd(1, DISABLE);
-					break;
-				default:
-					break;
-				}
+		} else {
+			prev = data;
+		}
+
+		if (frame_flag == true) {
+			net_gs_data.buffer[2 + gs_data++] = data;
+			if (gs_data >= GS_DATA_LEN) {
+				gs_data = 0;
+				frame_flag = false;
 			}
 		}
 	}
 }
 
 /*
- * uart0_recv_dma
+ * UART0_IRQHandler
  *
  *
- * uart0 receive data via dma
+ * UART0 handler
  */
-static int uart0_recv_dma(unsigned char *buffer, unsigned int size)
+void UART0_IRQHandler(void)
 {
-	EventBits_t uxBits;
+	uint32_t intsrc, tmp, tmp1;
 
-	GPDMA_Channel_CFG_Type GPDMACfg;
+	/* Determine the interrupt source */
+	intsrc = UART_GetIntId(LPC_UART0);
+	tmp = intsrc & UART_IIR_INTID_MASK;
 
-	GPDMACfg.ChannelNum = 0;
-	// Source memory - don't care
-	GPDMACfg.SrcMemAddr = 0;
-	// Destination memory
-	GPDMACfg.DstMemAddr = (uint32_t) buffer;
-	// Transfer size
-	GPDMACfg.TransferSize = size;
-	// Transfer width - don't care
-	GPDMACfg.TransferWidth = 0;
-	// Transfer type
-	GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_P2M;
-	// Source connection
-	GPDMACfg.SrcConn = GPDMA_CONN_UART0_Rx;
-	// Destination connection - don't care
-	GPDMACfg.DstConn = 0;
-	// Linker List Item - unused
-	GPDMACfg.DMALLI = 0;
-	GPDMA_Setup(&GPDMACfg);
+	// Receive Line Status
+	if (tmp == UART_IIR_INTID_RLS){
+		// Check line status
+		tmp1 = UART_GetLineStatus(LPC_UART0);
+		// Mask out the Receive Ready and Transmit Holding empty status
+		tmp1 &= (UART_LSR_OE | UART_LSR_PE | UART_LSR_FE | UART_LSR_BI | UART_LSR_RXFE);
+		// If any error exist
+		if (tmp1)
+			return;
+	}
 
-	// Enable GPDMA channel 0
-	GPDMA_ChannelCmd(0, ENABLE);
-
-	uxBits = xEventGroupWaitBits(xEventGroup, UART0_RX_DONE | UART0_RX_ERR, pdTRUE, pdFALSE, portMAX_DELAY);
-	if ((uxBits & UART0_RX_DONE) != UART0_RX_DONE)
-		return -1;
-
-	return 0;
-}
-
-/*
- * uart0_recv_dma
- *
- *
- * uart0 receive data via dma
- */
-static int uart0_send_dma(unsigned char *buffer, unsigned int size)
-{
-	EventBits_t uxBits;
-
-	GPDMA_Channel_CFG_Type GPDMACfg;
-
-	GPDMACfg.ChannelNum = 1;
-	// Source memory
-	GPDMACfg.SrcMemAddr = (uint32_t) buffer;
-	// Destination memory - don't care
-	GPDMACfg.DstMemAddr = 0;
-	// Transfer size
-	GPDMACfg.TransferSize = size;
-	// Transfer width - don't care
-	GPDMACfg.TransferWidth = 0;
-	// Transfer type
-	GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_M2P;
-	// Source connection - don't care
-	GPDMACfg.SrcConn = 0;
-	// Destination connection
-	GPDMACfg.DstConn = GPDMA_CONN_UART0_Tx;
-	// Linker List Item - unused
-	GPDMACfg.DMALLI = 0;
-	// Setup channel with given parameter
-	GPDMA_Setup(&GPDMACfg);
-
-	// Enable GPDMA channel 1
-	GPDMA_ChannelCmd(1, ENABLE);
-
-	uxBits = xEventGroupWaitBits(xEventGroup, UART0_TX_DONE | UART0_TX_ERR, pdTRUE, pdFALSE, portMAX_DELAY);
-	if ((uxBits & UART0_TX_DONE) != UART0_TX_DONE)
-		return -1;
-
-	return 0;
+	// Receive Data Available or Character time-out
+	if ((tmp == UART_IIR_INTID_RDA) || (tmp == UART_IIR_INTID_CTI))
+		uart_receive_int();
 }
 
 /*
@@ -228,42 +167,6 @@ void vTaskInfo(void *pvParameters)
 		trace_printf("free heap:%u\n", xPortGetFreeHeapSize());
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 	}
-}
-
-/*
- * vUartThread
- *
- *
- * receive data and send out via udp
- */
-void vUart0Thread(void *pvParameters)
-{
-	unsigned char *buffer = NULL;
-	unsigned char hello[] = "ready to receive.\r\n";
-
-	uart0_send_dma(hello, sizeof(hello));
-
-	buffer = pvPortMalloc(GS_PACK_LEN + 16);
-	if (buffer == NULL)
-		return;
-
-	while(true) {
-		uart0_recv_dma(buffer, GS_HEADER_LEN);
-		if (buffer[0] != GS_HEADER_I)
-			continue;
-		uart0_recv_dma(buffer + GS_HEADER_LEN, GS_HEADER_LEN);
-		if (buffer[1] != GS_HEADER_II)
-			continue;
-		uart0_recv_dma(buffer + GS_HEADER_LEN * 2, GS_DATA_LEN);
-
-		memcpy(net_gs_data.buffer, buffer, GS_PACK_LEN);
-		xEventGroupSetBits(xEventGroup, GS_EVENT);
-
-		uart0_send_dma(buffer, GS_PACK_LEN);
-	}
-
-	/* will never be here */
-	vPortFree(buffer);
 }
 
 
