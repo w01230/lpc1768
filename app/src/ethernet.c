@@ -8,7 +8,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-#include "event_groups.h"
 
 #include "lwip/sys.h"
 #include "lwip/tcpip.h"
@@ -235,6 +234,11 @@ static void vUDPClient(void *pvParameters)
 	server_addr.sin_addr.s_addr = inet_addr(UDP_REMOTE_SERVER_IP);
 
 	while (true) {
+		NVIC_EnableIRQ(UART0_IRQn);
+		if (xSemaphoreTake(xSemaphore, SEMAPHORE_TIME) != pdTRUE)
+			continue;
+		NVIC_DisableIRQ(UART0_IRQn);
+
 		status = connect(socketfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
 		if (status != 0)
 			continue;

@@ -15,10 +15,10 @@
 #define GS_DATA_LEN       (98)
 #define GS_PACK_LEN       (GS_HEADER_LEN * 2 + GS_DATA_LEN)
 
-#define UART_DELAY        (0x100000)
+#define SEMAPHORE_TIME    (10000)
 
 /* event group */
-extern EventGroupHandle_t xEventGroup;
+extern SemaphoreHandle_t xSemaphore;
 
 void vUartInit(void);
 void vTaskInfo(void *pvParameters);

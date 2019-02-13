@@ -35,13 +35,15 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-#include "event_groups.h"
 
 #include "ethernet.h"
 #include "uart.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+
+/* Semaphore for sync gs data */
+SemaphoreHandle_t xSemaphore = NULL;
 
 static void prvSetupHardware(void)
 {
@@ -59,6 +61,9 @@ int main (int argc, char* argv[])
 {
 	/* Configure the hardware. */
 	prvSetupHardware();
+
+	/* create semaphore */
+	xSemaphore = xSemaphoreCreateBinary();
 
 	/* Create task. */
 	xTaskCreate(vTaskInfo, "TaskList", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);

@@ -18,7 +18,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-#include "event_groups.h"
 
 #include "ethernet.h"
 
@@ -51,7 +50,7 @@ void vUartInit(void)
 	PinConfig.Pinnum = 3;
 	PINSEL_ConfigPin(&PinConfig);
 
-	UARTConfig.Baud_rate = 230400;
+	UARTConfig.Baud_rate = 115200;
 	UARTConfig.Databits = UART_DATABIT_8;
 	UARTConfig.Parity = UART_PARITY_NONE;
 	UARTConfig.Stopbits = UART_STOPBIT_1;
@@ -91,6 +90,7 @@ void uart_receive_int(void)
 	static uint8_t prev = 0;
 	static bool frame_flag = false;
 	static uint8_t gs_data = 0;
+	BaseType_t xHigherPriorityTaskWoken;
 
 	len = UART_Receive(LPC_UART0, &data, 1, NONE_BLOCKING);
 	if (len > 0) {
@@ -111,6 +111,8 @@ void uart_receive_int(void)
 			if (gs_data >= GS_DATA_LEN) {
 				gs_data = 0;
 				frame_flag = false;
+				xSemaphoreGiveFromISR(xSemaphore, &xHigherPriorityTaskWoken);
+				portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 			}
 		}
 	}
