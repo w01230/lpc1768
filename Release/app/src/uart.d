@@ -14,8 +14,7 @@ app/src/uart.o: ../app/src/uart.c ../system/include/diag/Trace.h \
  ../freertos/port/portmacro.h ../freertos/include/mpu_wrappers.h \
  ../freertos/include/task.h ../freertos/include/list.h \
  ../freertos/include/semphr.h ../freertos/include/queue.h \
- ../freertos/include/task.h ../freertos/include/event_groups.h \
- ../freertos/include/timers.h ../app/include/ethernet.h \
+ ../freertos/include/task.h ../app/include/ethernet.h \
  ../app/include/uart.h
 
 ../system/include/diag/Trace.h:
@@ -63,10 +62,6 @@ app/src/uart.o: ../app/src/uart.c ../system/include/diag/Trace.h \
 ../freertos/include/queue.h:
 
 ../freertos/include/task.h:
-
-../freertos/include/event_groups.h:
-
-../freertos/include/timers.h:
 
 ../app/include/ethernet.h:
 

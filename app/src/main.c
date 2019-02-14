@@ -36,8 +36,10 @@
 #include "task.h"
 #include "semphr.h"
 
+#include "freertos_lwip_mac.h"
 #include "ethernet.h"
 #include "uart.h"
+#include "flash.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -55,6 +57,9 @@ static void prvSetupHardware(void)
 
 	/* init uart */
 	vUartInit();
+
+	/* read net info */
+	device_info_read(&local_net);
 }
 
 int main (int argc, char* argv[])

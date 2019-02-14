@@ -21,6 +21,7 @@
 #include "diag/Trace.h"
 #include "ethernet.h"
 #include "uart.h"
+#include "flash.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -77,9 +78,15 @@ static int get_dev_info(struct device_s *device, char *type)
  */
 static int set_dev_net(struct net_info_s *net)
 {
-	struct net_info_s local_net;
+	int status = 0;
 
 	if (strcmp(net->mac_addr, local_net.mac_addr) != 0)
+		return -1;
+
+	memcpy(&local_net, net, sizeof(struct local_net_s));
+
+	status = device_info_save(&local_net);
+	if (status < 0)
 		return -1;
 
 	return 0;
@@ -157,6 +164,8 @@ static void vDeviceInfo(void *pvParameters)
 						if (sendto(socketfd, &device, sizeof(struct device_s), 0,
 							(struct sockaddr *)&multi, sizeof(struct sockaddr_in)) < 0)
 							trace_printf("sendto error\n");
+					} else {
+						trace_printf("set device net failed\n");
 					}
 				} else {
 					trace_printf("invalid request.\n");

@@ -5,16 +5,19 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../app/src/ethernet.c \
+../app/src/flash.c \
 ../app/src/main.c \
 ../app/src/uart.c 
 
 OBJS += \
 ./app/src/ethernet.o \
+./app/src/flash.o \
 ./app/src/main.o \
 ./app/src/uart.o 
 
 C_DEPS += \
 ./app/src/ethernet.d \
+./app/src/flash.d \
 ./app/src/main.d \
 ./app/src/uart.d 
 
