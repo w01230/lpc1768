@@ -35,17 +35,22 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "event_groups.h"
 
 #include "freertos_lwip_mac.h"
 #include "ethernet.h"
 #include "uart.h"
 #include "flash.h"
+#include "wdt.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
 /* Semaphore for sync gs data */
 SemaphoreHandle_t xSemaphore = NULL;
+
+/* create event group for wd */
+EventGroupHandle_t xEventGroup = NULL;
 
 static void prvSetupHardware(void)
 {
@@ -59,22 +64,35 @@ static void prvSetupHardware(void)
 	vUartInit();
 
 	/* read net info */
-	device_info_read(&local_net);
+	vDeviceInfoInit(&local_net);
+
+	/* int WDT */
+	vWDTInit();
 }
 
 int main (int argc, char* argv[])
 {
-	/* Configure the hardware. */
+	/* Configure the hardware */
 	prvSetupHardware();
 
 	/* create semaphore */
 	xSemaphore = xSemaphoreCreateBinary();
+	if (xSemaphore == NULL)
+		return -1;
 
-	/* Create task. */
-	xTaskCreate(vTaskInfo, "TaskList", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
-	xTaskCreate(vEthernetDaemon, "NetDaemon", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
+	/* create event group */
+	xEventGroup = xEventGroupCreate();
+	if (xEventGroup == NULL)
+		return -1;
 
-	/* Start the scheduler. */
+	/* Create task */
+#ifdef DEBUG
+	xTaskCreate(vTaskInfo, "tasklist", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
+#endif
+	xTaskCreate(vWDTFeed, "wdt", configMINIMAL_STACK_SIZE * 2, ( void * ) NULL, tskIDLE_PRIORITY + 3, NULL);
+	xTaskCreate(vEthernetDaemon, "netdeamon", configMINIMAL_STACK_SIZE, ( void * ) NULL, tskIDLE_PRIORITY + 2, NULL);
+
+	/* Start the scheduler */
 	vTaskStartScheduler();
 
 	return 0;

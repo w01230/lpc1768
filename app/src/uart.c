@@ -18,6 +18,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "event_groups.h"
 
 #include "ethernet.h"
 
@@ -34,7 +35,7 @@
  */
 void vUartInit(void)
 {
-	static uint8_t hello[] = "ready to receive data\n";
+	const uint8_t hello[] = "ready to receive data\n";
 
 	UART_CFG_Type UARTConfig;
 	UART_FIFO_CFG_Type UARTFIFOConfig;
@@ -50,7 +51,7 @@ void vUartInit(void)
 	PinConfig.Pinnum = 3;
 	PINSEL_ConfigPin(&PinConfig);
 
-	UARTConfig.Baud_rate = 115200;
+	UARTConfig.Baud_rate = 230400;
 	UARTConfig.Databits = UART_DATABIT_8;
 	UARTConfig.Parity = UART_PARITY_NONE;
 	UARTConfig.Stopbits = UART_STOPBIT_1;

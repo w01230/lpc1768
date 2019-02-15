@@ -8,6 +8,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "event_groups.h"
 
 #include "lwip/sys.h"
 #include "lwip/tcpip.h"
@@ -85,7 +86,7 @@ static int set_dev_net(struct net_info_s *net)
 
 	memcpy(&local_net, net, sizeof(struct local_net_s));
 
-	status = device_info_save(&local_net);
+	status = vDeviceInfoSave(&local_net);
 	if (status < 0)
 		return -1;
 
@@ -199,7 +200,7 @@ static void vUDPServer(void *pvParameters)
 	memset(&cliaddr, 0, sizeof(cliaddr));
 
 	// Filling server information
-	servaddr.sin_family	= AF_INET;
+	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = INADDR_ANY;
 	servaddr.sin_port = htons(UDP_SERVER_PORT);
 
@@ -323,6 +324,8 @@ void vEthernetDaemon(void *pvParameters)
 			}
 			vTaskDelay(configTICK_RATE_HZ / 4);		/* Delay for link detection (250mS) */
 		}
+
+		xEventGroupSetBits(xEventGroup, NET_MAIN_BIT);
 	}
 }
 

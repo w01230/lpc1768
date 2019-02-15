@@ -15,13 +15,13 @@
 #include "flash.h"
 
 /*
- * device_info_read
+ * vDeviceInfoInit
  *
  *
  * read device info from flash
  */
 
-int device_info_read(struct local_net_s *net)
+int vDeviceInfoInit(struct local_net_s *net)
 {
 	struct local_net_s flash_net;
 
@@ -36,12 +36,12 @@ int device_info_read(struct local_net_s *net)
 }
 
 /*
- * device_info_save
+ * vDeviceInfoSave
  *
  *
  * write device info to flash
  */
-int device_info_save(struct local_net_s *net)
+int vDeviceInfoSave(struct local_net_s *net)
 {
 	IAP_STATUS_CODE status = CMD_SUCCESS;
 	uint32_t uid[4] = {0};

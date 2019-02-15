@@ -68,7 +68,7 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 SECONDARY_FLASH += \
-lpc1768.hex \
+lpc1768.srec \
 
 SECONDARY_SIZE += \
 lpc1768.siz \
@@ -85,9 +85,9 @@ lpc1768.elf: $(OBJS) $(USER_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-lpc1768.hex: lpc1768.elf
+lpc1768.srec: lpc1768.elf
 	@echo 'Invoking: GNU ARM Cross Create Flash Image'
-	arm-none-eabi-objcopy -O ihex "lpc1768.elf"  "lpc1768.hex"
+	arm-none-eabi-objcopy -O srec "lpc1768.elf"  "lpc1768.srec"
 	@echo 'Finished building: $@'
 	@echo ' '
 

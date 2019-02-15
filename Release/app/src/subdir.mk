@@ -7,19 +7,22 @@ C_SRCS += \
 ../app/src/ethernet.c \
 ../app/src/flash.c \
 ../app/src/main.c \
-../app/src/uart.c 
+../app/src/uart.c \
+../app/src/wdt.c 
 
 OBJS += \
 ./app/src/ethernet.o \
 ./app/src/flash.o \
 ./app/src/main.o \
-./app/src/uart.o 
+./app/src/uart.o \
+./app/src/wdt.o 
 
 C_DEPS += \
 ./app/src/ethernet.d \
 ./app/src/flash.d \
 ./app/src/main.d \
-./app/src/uart.d 
+./app/src/uart.d \
+./app/src/wdt.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
