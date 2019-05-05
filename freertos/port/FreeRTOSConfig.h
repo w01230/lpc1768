@@ -92,5 +92,8 @@
 /* Priority 5, or 160 as only the top three bits are implemented. */
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY  (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 
+#define xPortPendSVHandler                    PendSV_Handler
+#define vPortSVCHandler                       SVC_Handler
+#define xPortSysTickHandler                   SysTick_Handler
 
 #endif /* FREERTOS_CONFIG_H */

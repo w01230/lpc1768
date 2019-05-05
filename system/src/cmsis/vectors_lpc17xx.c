@@ -114,10 +114,6 @@ CANActivity_IRQHandler(void);
 
 extern unsigned int _estack;
 
-extern void vPortSVCHandler(void);
-extern void xPortPendSVHandler(void);
-extern void xPortSysTickHandler(void);
-
 typedef void
 (* const pHandler)(void);
 
@@ -129,7 +125,7 @@ typedef void
 __attribute__ ((section(".isr_vector"),used))
 pHandler __isr_vectors[] =
 { //
-    (pHandler) &_estack,                          // The initial stack pointer
+    (pHandler) &_estack,                      // The initial stack pointer
     Reset_Handler,                            // The reset handler
     
     NMI_Handler,                              // The NMI handler
@@ -137,24 +133,24 @@ pHandler __isr_vectors[] =
     
 #if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
     MemManage_Handler,                        // The MPU fault handler
-    BusFault_Handler,// The bus fault handler
-    UsageFault_Handler,// The usage fault handler
+    BusFault_Handler,                         // The bus fault handler
+    UsageFault_Handler,                       // The usage fault handler
 #else
-    0, 0, 0,                  // Reserved
+    0, 0, 0,                                  // Reserved
 #endif
     0,                                        // Reserved
     0,                                        // Reserved
     0,                                        // Reserved
     0,                                        // Reserved
-    vPortSVCHandler,                              // SVCall handler
+    SVC_Handler,                              // SVCall handler
 #if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
     DebugMon_Handler,                         // Debug monitor handler
 #else
-    0,                      // Reserved
+    0,                                        // Reserved
 #endif
     0,                                        // Reserved
-    xPortPendSVHandler,                       // The PendSV handler
-    xPortSysTickHandler,                      // The SysTick handler
+    PendSV_Handler,                           // The PendSV handler
+    SysTick_Handler,                          // The SysTick handler
     
     // Chip Level - LPC17
     WDT_IRQHandler,                           // 16, 0x40 - WDT
