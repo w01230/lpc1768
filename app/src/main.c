@@ -42,6 +42,7 @@
 #include "uart.h"
 #include "flash.h"
 #include "wdt.h"
+#include "net.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
