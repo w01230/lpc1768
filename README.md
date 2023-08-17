@@ -1,5 +1,5 @@
 # LPC1768
-LPC1768 project for Drawing
+LPC1768 project
 
 # IDE 
 Eclipse with GCC
